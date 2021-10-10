@@ -1,7 +1,8 @@
 {
 	"name": "csv-translation-helper",
 	"displayName": "CSV Translation Helper",
-	"description": "Tool to help locate tanslatable strings (\"!LIKE_THIS\") and list missing ones to the end of the currently opened file. It adds the command \"Scan and add missing translatable strings\" to the command pallette to that end.",
+	"description": "Tool to help locate translatable strings (\"!LIKE_THIS\") and list missing ones to the end of the currently opened file. It adds the command \"Scan and add missing translatable strings\" to the command palette to that end.",
+	"repository": "https://github.com/RotateMe/csv-translation-helper",
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.60.0"
