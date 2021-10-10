@@ -8,61 +8,57 @@ export function activate(context: vscode.ExtensionContext) {
 	var fs = require('fs');
 
 	let disposable = vscode.commands.registerCommand('csv-translation-helper.addMissingTranslatableStrings', () => {
-		vscode.window.showInformationMessage('Scanning for missing translatable strings...');
-	});
+		let progOptions: vscode.ProgressOptions = { location: vscode.ProgressLocation.Notification, cancellable: true, title: "Scanning for translatable strings..." };
 
-	let filesPromise = vscode.workspace.findFiles(`*`);
-	filesPromise.then((files) => {
-		console.log('Scanning files for translatable strings ... ');
-		let translatableStrings = new Set();
-		for (let file of files) {
-			if (vscode.window.activeTextEditor?.document.uri.fsPath === file.fsPath) {
-				continue;
-			}
-			console.log('    '.concat(file.fsPath));
-			let fileContent = fs.readFileSync(file.fsPath, 'utf8');
-			let translatableStringRegex = /"(![A-Z0-9_]*)"/g;
-			let translatableStringMatches = fileContent.matchAll(translatableStringRegex);
-			if (translatableStringMatches) {
-				for (let match of translatableStringMatches) {
-					console.log(match[1]);
-					translatableStrings.add(match[1]);
+		vscode.window.withProgress(progOptions, async (_progress) => {
+			let files = await vscode.workspace.findFiles(`**/*.*`);
+			let translatableStrings = new Set();
+			for (let file of files) {
+				if (vscode.window.activeTextEditor?.document.uri.fsPath === file.fsPath) {
+					continue;
 				}
-			}
-		}
-		if (vscode.window.activeTextEditor) {
-			console.log('Scanning active file for already translated strings ... ');
-			let activeFileContent = fs.readFileSync(vscode.window.activeTextEditor.document.uri.fsPath, 'utf8');
-			let translatedStringRegex = /(![A-Z0-9_]*)/g;
-			let translatedStringMatches = activeFileContent.match(translatedStringRegex);
-			if (translatedStringMatches) {
-				for (let match of translatedStringMatches) {
-					if (translatableStrings.has(match)) {
-						translatableStrings.delete(match);
+				let fileContent = fs.readFileSync(file.fsPath, 'utf8');
+				let translatableStringRegex = /"(![A-Z0-9_]*)"/g;
+				let translatableStringMatches = fileContent.matchAll(translatableStringRegex);
+				if (translatableStringMatches) {
+					for (let match of translatableStringMatches) {
+						translatableStrings.add(match[1]);
 					}
 				}
 			}
-			console.log('Adding untranslated strings to end of active file ... ');
-			vscode.window.activeTextEditor.edit((editBuilder) => {
-				let curDoc = vscode.window.activeTextEditor?.document;
-				if (curDoc) {
-					const endOfLine: string = `\n`;
-					let textToInsert: string = endOfLine;
-					for (let translatableString of translatableStrings) {
-						if (typeof (translatableString) === `string`) {
-							textToInsert = textToInsert.concat(translatableString).concat(",\"\",\"\"").concat(endOfLine);
+
+			if (vscode.window.activeTextEditor) {
+				let activeFileContent = fs.readFileSync(vscode.window.activeTextEditor.document.uri.fsPath, 'utf8');
+				let translatedStringRegex = /(![A-Z0-9_]*)/g;
+				let translatedStringMatches = activeFileContent.match(translatedStringRegex);
+				if (translatedStringMatches) {
+					for (let match of translatedStringMatches) {
+						if (translatableStrings.has(match)) {
+							translatableStrings.delete(match);
 						}
 					}
-					let endOfFilePosition = curDoc.lineAt(curDoc.lineCount - 1).rangeIncludingLineBreak.end;
-					editBuilder.insert(endOfFilePosition, textToInsert);
 				}
-			});
-		}
+				vscode.window.activeTextEditor.edit((editBuilder) => {
+					let curDoc = vscode.window.activeTextEditor?.document;
+					if (curDoc) {
+						const endOfLine: string = `\n`;
+						let textToInsert: string = endOfLine;
+						for (let translatableString of translatableStrings) {
+							if (typeof (translatableString) === `string`) {
+								textToInsert = textToInsert.concat(translatableString).concat(",\"\",\"\"").concat(endOfLine);
+							}
+						}
+						let endOfFilePosition = curDoc.lineAt(curDoc.lineCount - 1).rangeIncludingLineBreak.end;
+						editBuilder.insert(endOfFilePosition, textToInsert);
+					}
+				});
+			}
+		});
+
+		context.subscriptions.push(disposable);
+
+		console.log('CSV Translation Helper is activated');
 	});
-
-	context.subscriptions.push(disposable);
-
-	console.log('CSV Translation Helper is activated');
 }
 
 // this method is called when your extension is deactivated
